@@ -12,8 +12,7 @@
       "title": "Upload Image to R2",
       "subtitle": "Cloudflare R2",
       "description": "Upload selected image to Cloudflare R2 with optional AVIF conversion",
-      "mode": "no-view",
-      "label": "Upload"
+      "mode": "no-view"
     }
   ],
   "preferences": [

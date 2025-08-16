@@ -82,29 +82,16 @@ async function generateFileName(originalPath: string, format: string, customExte
   return formattedName;
 }
 
-async function uploadToR2(filePath: string, customFileName?: string): Promise<{ url: string; markdown: string }> {
-  // 首先尝试从环境变量获取
-  let bucketName = process.env.R2_BUCKET_NAME;
-  let accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  let secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  let accountId = process.env.R2_ACCOUNT_ID;
-  let customDomain = process.env.CUSTOM_DOMAIN;
-  let fileNameFormat = process.env.FILE_NAME_FORMAT;
-
-  // 如果环境变量不存在，则从首选项获取
-  if (!bucketName || !accessKeyId || !secretAccessKey || !accountId) {
-    const preferences = getPreferenceValues<Preferences>();
-    bucketName = preferences.r2BucketName;
-    accessKeyId = preferences.r2AccessKeyId;
-    secretAccessKey = preferences.r2SecretAccessKey;
-    accountId = preferences.r2AccountId;
-    customDomain = preferences.customDomain;
-    fileNameFormat = preferences.fileNameFormat;
-  }
-
-  if (!bucketName || !accessKeyId || !secretAccessKey || !accountId) {
-    throw new Error("Missing R2 credentials. Please configure in extension preferences.");
-  }
+async function uploadToR2(filePath: string, customFileName: string): Promise<{ url: string; markdown: string }> {
+  const preferences = getPreferenceValues<Preferences>();
+  const {
+    r2BucketName: bucketName,
+    r2AccessKeyId: accessKeyId,
+    r2SecretAccessKey: secretAccessKey,
+    r2AccountId: accountId,
+    customDomain,
+    fileNameFormat,
+  } = preferences;
 
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
 
@@ -213,11 +200,11 @@ export default async function Command() {
           newFilePath = await convertToAvif(inputFilePath, avifencPath);
         } catch (conversionError: unknown) {
           // 如果转换失败，使用原始文件
-          console.error("Conversion failed, using original file:", conversionError);
+          const error = conversionError as Error;
           await showToast({
             style: Toast.Style.Failure,
             title: "Conversion failed",
-            message: (conversionError as Error).message || "Unknown error occurred during conversion",
+            message: error.message,
           });
           newFilePath = inputFilePath;
         }
@@ -238,12 +225,13 @@ export default async function Command() {
       title: "File uploaded",
       message: "Markdown link copied to clipboard",
     });
-  } catch (error: unknown) {
-    console.error("Upload error:", error);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred during upload";
+    console.error("Upload error:", errorMessage);
     await showToast({
       style: Toast.Style.Failure,
       title: "Error",
-      message: (error as Error).message || "Unknown error occurred during upload",
+      message: errorMessage,
     });
   }
 }
