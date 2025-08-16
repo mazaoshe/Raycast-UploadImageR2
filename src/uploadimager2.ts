@@ -221,7 +221,6 @@ export default async function Command() {
 
     // 将 Markdown 格式的链接复制到剪贴板
     Clipboard.copy(markdown);
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred during upload";
     console.error("Upload error:", errorMessage);
