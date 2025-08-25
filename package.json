@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "uploadimage",
+  "name": "r2-uploader",
   "title": "Image to R2 Uploader",
   "description": "Upload images to Cloudflare R2 with optional AVIF conversion. After upload, the Markdown formatted link will be copied to clipboard.",
   "icon": "extension-icon.png",
@@ -8,7 +8,7 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "uploadimager2",
+      "name": "r2-uploader",
       "title": "Upload Image to R2",
       "subtitle": "Cloudflare R2",
       "description": "Upload images to Cloudflare R2 with optional AVIF conversion. After upload, the Markdown formatted link will be copied to clipboard.",

@@ -1,8 +1,3 @@
-/*
- * @Author: Yang
- * @Date: 2025-08-15 21:50:48
- * @Description: 请填写简介
- */
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -16,13 +11,11 @@ export async function convertToAvif(
   try {
     const outputPath = path.join(path.dirname(inputPath), path.basename(inputPath, path.extname(inputPath)) + ".avif");
 
-    // 使用系统命令行工具 avifenc 进行 AVIF 转换
     await execFileAsync(avifencPath, ["-q", "80", "-s", "6", inputPath, outputPath]);
 
     return outputPath;
   } catch (error: unknown) {
     console.error("AVIF conversion error:", error);
-    // 提供更友好的错误信息
     const err = error as { code?: string; message?: string };
     if (err.code === "ENOENT") {
       throw new Error(
