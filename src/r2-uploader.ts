@@ -172,7 +172,7 @@ export default async function Command() {
           title: "AVIF conversion tool not found",
           message: "Please install libavif using 'brew install libavif' or check the path in extension preferences",
         });
-          } else {
+      } else {
         try {
           newFilePath = await convertToAvif(inputFilePath, avifencPath);
         } catch (conversionError: unknown) {
