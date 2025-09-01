@@ -1,42 +1,33 @@
 import { showToast, Toast, getSelectedFinderItems, Clipboard, getPreferenceValues } from "@raycast/api";
+import { showFailureToast } from "@raycast/utils";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
-import { convertToAvif } from "./utils/convert";
+import { format } from "date-fns";
+import { AVIFENC_DEFAULT_PATH } from "./utils/constants";
+import { getMimeType, isSupportedImageFormat } from "./utils/mime-types";
+import { convertToAvif, convertToWebP } from "./utils/convert";
 
-interface Preferences {
-  r2BucketName: string;
-  r2AccessKeyId: string;
-  r2SecretAccessKey: string;
-  r2AccountId: string;
-  customDomain: string;
-  fileNameFormat: string;
-  convertToAvif: boolean;
-  avifencPath: string;
-}
-
-function isAvifencAvailable(customPath?: string): boolean {
-  const avifencPath = customPath || "/opt/homebrew/bin/avifenc";
-
+function isAvifencAvailable(avifencPath: string): boolean {
   try {
     execFileSync(avifencPath, ["--version"]);
     return true;
-  } catch {
+  } catch (error) {
     try {
       execFileSync("avifenc", ["--version"]);
       return true;
-    } catch {
+    } catch (error) {
       return false;
     }
   }
 }
 
-async function generateFileName(originalPath: string, format: string, customExtension?: string): Promise<string> {
+async function generateFileName(originalPath: string, formatString: string, customExtension?: string): Promise<string> {
   const ext = customExtension || path.extname(originalPath).toLowerCase();
   const basename = path.basename(originalPath, path.extname(originalPath));
 
-  if (!format) {
+  if (!formatString) {
     if (customExtension) {
       return basename + customExtension;
     }
@@ -44,22 +35,16 @@ async function generateFileName(originalPath: string, format: string, customExte
   }
 
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
 
-  let formattedName = format
+  let formattedName = formatString
     .replace(/{name}/g, basename)
     .replace(/{ext}/g, ext.substring(1))
-    .replace(/{year}/g, String(year))
-    .replace(/{month}/g, month)
-    .replace(/{day}/g, day)
-    .replace(/{hours}/g, hours)
-    .replace(/{minutes}/g, minutes)
-    .replace(/{seconds}/g, seconds);
+    .replace(/{year}/g, format(now, "yyyy"))
+    .replace(/{month}/g, format(now, "MM"))
+    .replace(/{day}/g, format(now, "dd"))
+    .replace(/{hours}/g, format(now, "HH"))
+    .replace(/{minutes}/g, format(now, "mm"))
+    .replace(/{seconds}/g, format(now, "ss"));
 
   if (!path.extname(formattedName)) {
     formattedName += ext;
@@ -70,11 +55,12 @@ async function generateFileName(originalPath: string, format: string, customExte
   return formattedName;
 }
 
+
 async function uploadToR2(
   filePath: string,
   customFileName: string | undefined,
 ): Promise<{ url: string; markdown: string }> {
-  const preferences = getPreferenceValues<Preferences>();
+  const preferences = getPreferenceValues();
   const {
     r2BucketName: bucketName,
     r2AccessKeyId: accessKeyId,
@@ -102,17 +88,7 @@ async function uploadToR2(
     customFileName || (await generateFileName(filePath, fileNameFormat || "", path.extname(filePath)));
   const key = finalFileName;
 
-  const fileExt = path.extname(filePath).toLowerCase();
-  let contentType = "image/jpeg";
-  if (fileExt === ".png") {
-    contentType = "image/png";
-  } else if (fileExt === ".gif") {
-    contentType = "image/gif";
-  } else if (fileExt === ".webp") {
-    contentType = "image/webp";
-  } else if (fileExt === ".avif") {
-    contentType = "image/avif";
-  }
+  const contentType = getMimeType(filePath);
 
   const putObjectCommand = new PutObjectCommand({
     Bucket: bucketName,
@@ -147,9 +123,12 @@ export default async function Command() {
 
     const inputFilePath = selectedItems[0].path;
 
-    const preferences = getPreferenceValues<Preferences>();
-    const fileNameFormat = preferences.fileNameFormat;
-    const shouldConvertToAvif = preferences.convertToAvif;
+    const preferences = getPreferenceValues();
+    const {
+      fileNameFormat,
+      convertToAvif: shouldConvertToAvif,
+      avifencPath: avifencPathPreference,
+    } = preferences;
 
     let customFileName: string | undefined;
 
@@ -164,25 +143,40 @@ export default async function Command() {
 
     let newFilePath = inputFilePath;
 
-    if (shouldConvertToAvif) {
-      const avifencPath = preferences.avifencPath || "/opt/homebrew/bin/avifenc";
-      if (!isAvifencAvailable(avifencPath)) {
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "AVIF conversion tool not found",
-          message: "Please install libavif using 'brew install libavif' or check the path in extension preferences",
-        });
-      } else {
+    // Prioritize WebP conversions, or AVIF conversions if WebP is not enabled and AVIF is enabled
+    if (preferences.convertToWebP) {
+      if (isSupportedImageFormat(inputFilePath)) {
         try {
-          newFilePath = await convertToAvif(inputFilePath, avifencPath);
-        } catch (conversionError: unknown) {
-          const error = conversionError as Error;
+          // Get the WebP quality setting, which defaults to 80
+          const webpQuality = preferences.webpQuality ? parseInt(preferences.webpQuality, 10) : 80;
+          // Ensure that the quality value is within the valid range
+          const quality = Math.max(0, Math.min(100, webpQuality));
+
+          newFilePath = await convertToWebP(inputFilePath, quality);
+        } catch (conversionError) {
+          await showFailureToast(conversionError, { title: "Conversion failed" });
+          newFilePath = inputFilePath;
+        }
+      }
+    } else if (shouldConvertToAvif) {
+      if (isSupportedImageFormat(inputFilePath)) {
+        const avifencPath = avifencPathPreference || AVIFENC_DEFAULT_PATH;
+        if (!isAvifencAvailable(avifencPath)) {
           await showToast({
             style: Toast.Style.Failure,
-            title: "Conversion failed",
-            message: error.message,
+            title: "AVIF conversion tool not found",
+            message: "Please install libavif using 'brew install libavif' or check the path in extension preferences",
           });
-          newFilePath = inputFilePath;
+        } else {
+          try {
+            const avifQuality = preferences.avifQuality ? parseInt(preferences.avifQuality, 10) : 80;
+            const quality = Math.max(0, Math.min(100, avifQuality));
+
+            newFilePath = await convertToAvif(inputFilePath, avifencPath, quality);
+          } catch (conversionError) {
+            await showFailureToast(conversionError, { title: "Conversion failed" });
+            newFilePath = inputFilePath;
+          }
         }
       }
     }
@@ -193,14 +187,12 @@ export default async function Command() {
     toastUploading.title = "Upload complete";
     toastUploading.message = url;
 
-    Clipboard.copy(markdown);
+    await Clipboard.copy(markdown);
+    toastUploading.style = Toast.Style.Success;
+    toastUploading.title = "Upload completed!";
+    toastUploading.message = "URL copied to clipboard";
+
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred during upload";
-    console.error("Upload error:", errorMessage);
-    await showToast({
-      style: Toast.Style.Failure,
-      title: "Error",
-      message: errorMessage,
-    });
+    await showFailureToast(error, { title: "Error uploading to R2" });
   }
 }
