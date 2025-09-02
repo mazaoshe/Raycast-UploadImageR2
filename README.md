@@ -1,6 +1,6 @@
 # Cloudflare R2 File Uploader
 
-Upload any files to Cloudflare R2 storage service with optional AVIF/WebP conversion for images.
+Upload any files to Cloudflare R2 storage service with optional AVIF conversion for images.
 
 ## Contact
 
@@ -39,7 +39,7 @@ Note: Cloudflare R2 supports all file types as it's an object storage service th
 ## Features
 
 - Upload any files to Cloudflare R2 storage service
-- Optionally convert images to WebP or AVIF format to reduce file size
+- Optionally convert images to AVIF format to reduce file size
 - Support custom filename formats
 - Automatically generate Markdown links and copy to clipboard
 - After upload, the link is automatically copied to clipboard for easy pasting
@@ -58,10 +58,6 @@ For AVIF conversion:
 brew install libavif
 ```
 
-For WebP conversion:
-```bash
-brew install webp
-```
 
 ## Configuration Options
 
@@ -71,32 +67,18 @@ brew install webp
 4. **R2 Account ID** - Your Cloudflare account ID
 5. **Custom Domain** (optional) - Custom domain for accessing files
 6. **File Name Format** (optional) - Custom filename format
-7. **Convert to WebP** - Convert images to WebP format before uploading (enabled by default)
-8. **WebP Quality** - Quality setting for WebP conversion (0-100, default: 80)
-9. **Convert to AVIF** - Convert images to AVIF format before uploading (only works when WebP conversion is disabled)
-10. **AVIF Quality** - Quality setting for AVIF conversion (0-100, default: 80)
-11. **AVIF Encoder Path** (optional) - Path to avifenc command (default: `/opt/homebrew/bin/avifenc`)
+7. **Convert to AVIF** - Convert images to AVIF format before uploading
+8. **AVIF Quality** - Quality setting for AVIF conversion (0-100, default: 80)
+12. **AVIF Encoder Path** (optional) - Path to avifenc command (default: `/opt/homebrew/bin/avifenc`)
 13. **Generate Markdown** - Generate Markdown formatted links instead of plain URLs
 
 ## Image Conversion
 
-The extension supports two image compression formats:
-
-### WebP Conversion (Priority)
-- Uses sharp Node.js library for conversion
-- Good compression with wide browser support
-- Enabled by default
-- No external tools required
-- Quality setting: 0-100 (default: 80)
-
 ### AVIF Conversion
 - Uses `avifenc` tool from libavif package
-- Provides superior compression compared to JPEG/WebP
-- Only works when WebP conversion is disabled
+- Provides superior compression compared to JPEG
 - Requires external tool installation
 - Quality setting: 0-100 (default: 80)
-
-When both conversion options are enabled, only WebP conversion will be performed.
 
 ## Custom Filename Format
 
@@ -124,11 +106,12 @@ Example formats:
    - R2 Access Key ID
    - R2 Secret Access Key
    - R2 Account ID
-4. (Optional) Install libavif for AVIF conversion: `brew install libavif`
+4. (Optional) Install conversion tools:
+   - For AVIF: `brew install libavif`
 5. (Optional) Configure additional settings:
    - Custom Domain
    - File Name Format
-   - Convert to WebP (enabled by default) or AVIF
+   - Convert to AVIF
    - Quality settings for conversions
    - Encoder paths (if different from default)
    - Generate Markdown (disabled by default)
@@ -138,7 +121,7 @@ Example formats:
 2. Open Raycast (Cmd + Space) and search for "Upload File to R2"
 3. Press Enter to execute the command
 4. The extension will:
-   - (If enabled and file is an image) Convert the image to WebP or AVIF format
+   - (If enabled and file is an image) Convert the image to AVIF format
    - Upload the file to your R2 bucket
    - Generate a link (Markdown or plain URL)
    - Copy the link to your clipboard
@@ -148,8 +131,9 @@ Example formats:
 
 ### Conversion Tool Not Found
 If you encounter a "conversion tool not found" error:
-1. Ensure libavif is installed for AVIF conversion: `brew install libavif`
-2. Check that the avifenc path setting points to the correct command
+1. Ensure the required tool is installed:
+   - For AVIF: `brew install libavif`
+2. Check that the encoder path setting points to the correct command
 3. Run `which avifenc` in terminal to find the correct path
 
 ### Upload Failed

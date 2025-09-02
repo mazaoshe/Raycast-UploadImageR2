@@ -69,24 +69,6 @@
       "placeholder": "{name}_{year}{month}{day}_{hours}{minutes}{seconds}"
     },
     {
-      "name": "convertToWebP",
-      "type": "checkbox",
-      "required": false,
-      "title": "Convert to WebP",
-      "description": "Convert images to WebP format before uploading",
-      "label": "Convert to WebP",
-      "default": true
-    },
-    {
-      "name": "webpQuality",
-      "type": "textfield",
-      "required": false,
-      "title": "WebP Quality",
-      "description": "Quality setting for WebP conversion (0-100, default: 80)",
-      "placeholder": "80",
-      "default": "80"
-    },
-    {
       "name": "convertToAvif",
       "type": "checkbox",
       "required": false,
@@ -123,25 +105,24 @@
     }
   ],
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.614.0",
-    "@raycast/api": "^1.81.2",
-    "@raycast/utils": "^1.16.3",
-    "canvas": "^3.2.0",
-    "date-fns": "^3.6.0",
-    "sharp": "^0.32.6",
-    "webp-converter": "^2.3.3"
+    "@aws-sdk/client-s3": "^3.864.0",
+    "@raycast/api": "^1.102.4",
+    "@raycast/utils": "^1.17.0"
   },
   "devDependencies": {
-    "@raycast/eslint-config": "^1.0.6",
-    "@types/node": "20.8.10",
-    "eslint": "^8.53.0",
-    "prettier": "^3.0.3",
-    "typescript": "^5.2.2"
+    "@raycast/eslint-config": "^2.0.4",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
   },
   "scripts": {
-    "build": "ray build -e dist",
+    "build": "ray build",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
-    "lint": "ray lint"
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
   }
 }
