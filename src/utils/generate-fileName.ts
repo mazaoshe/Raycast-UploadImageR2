@@ -1,6 +1,6 @@
 
 import path from "path";
-import { format } from "date-fns";
+import dayjs from "dayjs";
 
 export async function generateFileName(originalPath: string, formatString: string, customExtension?: string): Promise<string> {
   const ext = customExtension || path.extname(originalPath).toLowerCase();
@@ -18,12 +18,12 @@ export async function generateFileName(originalPath: string, formatString: strin
   let formattedName = formatString
     .replace(/{name}/g, basename)
     .replace(/{ext}/g, ext.substring(1))
-    .replace(/{year}/g, format(now, "yyyy"))
-    .replace(/{month}/g, format(now, "MM"))
-    .replace(/{day}/g, format(now, "dd"))
-    .replace(/{hours}/g, format(now, "HH"))
-    .replace(/{minutes}/g, format(now, "mm"))
-    .replace(/{seconds}/g, format(now, "ss"));
+    .replace(/{year}/g, dayjs(now).format("yyyy"))
+    .replace(/{month}/g, dayjs(now).format("MM"))
+    .replace(/{day}/g, dayjs(now).format("dd"))
+    .replace(/{hours}/g, dayjs(now).format("HH"))
+    .replace(/{minutes}/g, dayjs(now).format("mm"))
+    .replace(/{seconds}/g, dayjs(now).format("ss"));
 
   if (!path.extname(formattedName)) {
     formattedName += ext;
