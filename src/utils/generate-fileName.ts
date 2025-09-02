@@ -1,8 +1,11 @@
-
 import path from "path";
 import dayjs from "dayjs";
 
-export async function generateFileName(originalPath: string, formatString: string, customExtension?: string): Promise<string> {
+export async function generateFileName(
+  originalPath: string,
+  formatString: string,
+  customExtension?: string,
+): Promise<string> {
   const ext = customExtension || path.extname(originalPath).toLowerCase();
   const basename = path.basename(originalPath, path.extname(originalPath));
 

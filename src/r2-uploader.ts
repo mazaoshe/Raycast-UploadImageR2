@@ -1,4 +1,12 @@
-import { showToast, Toast, getSelectedFinderItems, Clipboard, getPreferenceValues, openExtensionPreferences } from "@raycast/api";
+import {
+  showToast,
+  Toast,
+  getSelectedFinderItems,
+  Clipboard,
+  getPreferenceValues,
+  openExtensionPreferences,
+  PreferenceValues,
+} from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { execFileSync } from "child_process";
 import { AVIFENC_DEFAULT_PATH } from "./utils/constants";
@@ -7,33 +15,33 @@ import { convertToAvif } from "./utils/convert";
 import { uploadToR2 } from "./utils/uploadToR2";
 import { generateFileName } from "./utils/generate-fileName";
 
-function isAvifencAvailable(avifencPath: string): boolean {
+async function isAvifencAvailable(avifencPath: string): Promise<boolean> {
   try {
     execFileSync(avifencPath, ["--version"]);
     return true;
   } catch (error) {
+    await showFailureToast(error, { title: "execFileSync avifencPath" });
+
     try {
       execFileSync("avifenc", ["--version"]);
       return true;
     } catch (error) {
+      await showFailureToast(error, { title: "execFileSync avifenc" });
       return false;
     }
   }
 }
 
-function isPreferencesConfigured(preferences: any): boolean {
+function isPreferencesConfigured(preferences: PreferenceValues): boolean {
   return Boolean(
-    preferences.r2BucketName &&
-    preferences.r2AccessKeyId &&
-    preferences.r2SecretAccessKey &&
-    preferences.r2AccountId
+    preferences.r2BucketName && preferences.r2AccessKeyId && preferences.r2SecretAccessKey && preferences.r2AccountId,
   );
 }
 
 export default async function Command() {
   try {
     const preferences = getPreferenceValues();
-    
+
     // 检查是否已配置必要参数
     if (!isPreferencesConfigured(preferences)) {
       await showToast({
@@ -44,8 +52,8 @@ export default async function Command() {
           title: "Open Preferences",
           onAction: () => {
             openExtensionPreferences();
-          }
-        }
+          },
+        },
       });
       return;
     }
@@ -89,7 +97,6 @@ export default async function Command() {
           const quality = Math.max(0, Math.min(100, avifQuality));
 
           newFilePath = await convertToAvif(inputFilePath, avifencPath, quality);
-
         } catch (conversionError) {
           await showFailureToast(conversionError, { title: "Conversion failed" });
           newFilePath = inputFilePath;
@@ -111,7 +118,6 @@ export default async function Command() {
     toastUploading.style = Toast.Style.Success;
     toastUploading.title = "Upload completed!";
     toastUploading.message = "URL copied to clipboard";
-
   } catch (error) {
     await showFailureToast(error, { title: "Error uploading to R2" });
   }

@@ -1,4 +1,4 @@
-module.exports = require('@raycast/eslint-config');
-module.exports = [
-  ...raycastConfig,
-];
+import { defineConfig } from "eslint/config";
+import raycastConfig from "@raycast/eslint-config";
+
+export default defineConfig([...raycastConfig]);
