@@ -1,4 +1,4 @@
-import { showToast, Toast, getSelectedFinderItems, Clipboard, getPreferenceValues } from "@raycast/api";
+import { showToast, Toast, getSelectedFinderItems, Clipboard, getPreferenceValues, openExtensionPreferences } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { execFileSync } from "child_process";
 import { AVIFENC_DEFAULT_PATH } from "./utils/constants";
@@ -21,9 +21,35 @@ function isAvifencAvailable(avifencPath: string): boolean {
   }
 }
 
+function isPreferencesConfigured(preferences: any): boolean {
+  return Boolean(
+    preferences.r2BucketName &&
+    preferences.r2AccessKeyId &&
+    preferences.r2SecretAccessKey &&
+    preferences.r2AccountId
+  );
+}
 
 export default async function Command() {
   try {
+    const preferences = getPreferenceValues();
+    
+    // 检查是否已配置必要参数
+    if (!isPreferencesConfigured(preferences)) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "R2 configuration required",
+        message: "Please configure your R2 credentials in extension preferences",
+        primaryAction: {
+          title: "Open Preferences",
+          onAction: () => {
+            openExtensionPreferences();
+          }
+        }
+      });
+      return;
+    }
+
     const selectedItems = await getSelectedFinderItems();
 
     if (!selectedItems || selectedItems.length === 0) {
@@ -33,7 +59,6 @@ export default async function Command() {
 
     const inputFilePath = selectedItems[0].path;
 
-    const preferences = getPreferenceValues();
     const {
       fileNameFormat,
       convertToAvif: shouldConvertToAvif,

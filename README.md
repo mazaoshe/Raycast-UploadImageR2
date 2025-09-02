@@ -13,7 +13,7 @@ For issues or questions regarding this extension, please contact:
 This extension supports uploading all file types to Cloudflare R2. Here are the main categories:
 
 ### Image Formats
-- JPEG/JPG, PNG, GIF, WebP, AVIF, SVG, ICO, TIFF, BMP, PSD
+- JPEG/JPG, PNG, GIF, AVIF, SVG, ICO, TIFF, BMP, PSD
 
 ### Document Formats
 - PDF, TXT, JSON, XML, CSV, RTF, Markdown (MD)
@@ -64,13 +64,13 @@ brew install libavif
 1. **R2 Bucket Name** - Your Cloudflare R2 bucket name
 2. **R2 Access Key ID** - Your Cloudflare R2 access key ID
 3. **R2 Secret Access Key** - Your Cloudflare R2 secret access key
-4. **R2 Account ID** - Your Cloudflare account ID
+4. **R2 Account ID** - Your Cloudflare account ID (the part before .r2.cloudflarestorage.com in your R2 URL)
 5. **Custom Domain** (optional) - Custom domain for accessing files
 6. **File Name Format** (optional) - Custom filename format
 7. **Convert to AVIF** - Convert images to AVIF format before uploading
 8. **AVIF Quality** - Quality setting for AVIF conversion (0-100, default: 80)
-12. **AVIF Encoder Path** (optional) - Path to avifenc command (default: `/opt/homebrew/bin/avifenc`)
-13. **Generate Markdown** - Generate Markdown formatted links instead of plain URLs
+9. **AVIF Encoder Path** (optional) - Path to avifenc command (default: `/opt/homebrew/bin/avifenc`)
+10. **Generate Markdown** - Generate Markdown formatted links instead of plain URLs
 
 ## Image Conversion
 
@@ -105,7 +105,7 @@ Example formats:
    - R2 Bucket Name
    - R2 Access Key ID
    - R2 Secret Access Key
-   - R2 Account ID
+   - R2 Account ID (the part before .r2.cloudflarestorage.com in your R2 URL)
 4. (Optional) Install conversion tools:
    - For AVIF: `brew install libavif`
 5. (Optional) Configure additional settings:
