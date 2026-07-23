@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Raycast extension ("Cloudflare R2 File Uploader") with a single no-view command: it uploads the Finder-selected
 file to a Cloudflare R2 bucket (via the S3-compatible API), optionally converts images to AVIF first, and copies
-the resulting URL (or a Markdown image link) to the clipboard.
+the resulting link (plain URL, Markdown, or HTML, per preference) to the clipboard.
 
 ## Commands
 
@@ -35,6 +35,8 @@ Entry point: `src/r2-uploader.ts` (`Command()`), wired up via the single command
    let Raycast regenerate it).
 2. Bail out with a toast (and a button to open extension preferences) if required R2 credentials aren't set.
 3. Get the selected file from Finder via `getSelectedFinderItems()` — only the first selected item is used.
+   `getSelectedFinderItems()` throws if Finder isn't the frontmost app; this is caught separately and surfaced as
+   a friendly toast rather than falling through to the generic error handler.
 4. If the file is an image format AVIF-conversion supports (`isSupportedImageFormat` in
    `src/utils/mime-types.ts`) and the "Convert to AVIF" preference is on, shell out to `avifenc`
    (`src/utils/convert.ts`) to produce a sibling `.avif` file. The `avifenc` binary is an external dependency
@@ -43,23 +45,40 @@ Entry point: `src/r2-uploader.ts` (`Command()`), wired up via the single command
 5. If a custom filename format preference is set, render it via `generateFileName` (`src/utils/generate-fileName.ts`).
 6. Upload via `uploadToR2` (`src/utils/uploadToR2.ts`), which builds an `@aws-sdk/client-s3` `S3Client` pointed at
    R2's S3-compatible endpoint (`https://{accountId}.r2.cloudflarestorage.com`, `forcePathStyle: true`,
-   `region: "auto"`) and issues a `PutObjectCommand`. Content-Type is derived from the file extension via the
-   static lookup table in `src/utils/mime-types.ts`.
+   `region: "auto"`) and issues a `PutObjectCommand`. The object key is the final filename, optionally prefixed
+   with a rendered "Upload Path Prefix" folder path (`buildObjectKey` in `uploadToR2.ts`) so files can be stored
+   under a folder instead of the bucket root. Content-Type is derived from the file extension via the static
+   lookup table in `src/utils/mime-types.ts`.
 7. Build the final URL — prefixed with the custom domain preference if set, otherwise the raw R2 endpoint/bucket
-   URL — and copy either the plain URL or a Markdown `![alt](url)` link to the clipboard depending on the
-   "Generate Markdown" preference.
+   URL — and copy the plain URL, a Markdown `![alt](url)` link, or an HTML `<img>` tag to the clipboard depending
+   on the "Link Format" preference (`url` / `markdown` / `html`).
 
-Notes on the filename templating (`generateFileName`): it does simple string `.replace()` of `{name}`, `{ext}`,
-`{year}`, `{month}`, `{day}`, `{hours}`, `{minutes}`, `{seconds}` placeholders, formatting the timestamp with
-`dayjs`. It always forces the final extension to match the original (or a passed-in `customExtension`), overriding
-whatever extension the format string produced.
+Notes on templating: both the filename format (`generateFileName`) and the upload path prefix (`buildObjectKey`)
+share the same token renderer, `renderTemplateTokens` in `src/utils/generate-fileName.ts` — it does string
+`.replace()` of `{name}`, `{ext}`, `{year}`, `{month}`, `{day}`, `{hours}`, `{minutes}`, `{seconds}` placeholders,
+formatting the timestamp with `dayjs` (uppercase tokens: `YYYY`/`MM`/`DD`/`HH`/`mm`/`ss`). `generateFileName`
+additionally always forces the final extension to match the original (or a passed-in `customExtension`),
+overriding whatever extension the format string produced. `buildObjectKey` strips empty/`.`/`..` path segments
+from the rendered prefix as a basic guard against writing outside the intended folder.
+
+### Per-invocation upload folder (sticky argument)
+
+The command also takes an optional Raycast `folder` argument (see `arguments` in `package.json`, resolved via
+`resolveUploadFolder()` in `src/r2-uploader.ts`) that overrides the static "Upload Path Prefix" preference for one
+run and is then "sticky": it's persisted to `LocalStorage` (key `uploadFolder`) so the *next* invocation reuses it
+even with the argument left blank, and the command's subtitle in Raycast's root search is updated via
+`updateCommandMetadata()` to always show the currently active folder (or the default subtitle when unset/reset)
+— this exists specifically so a forgotten sticky folder is visible before upload, not discovered after. Typing
+`/` or `root` clears the sticky value and resets the subtitle. The resolved folder is passed as
+`pathPrefixOverride` to `uploadToR2()`, taking priority over the `uploadPathPrefix` preference; leaving both the
+argument and sticky storage empty falls back to that preference (or bucket root if unset).
 
 ## Preferences / config surface
 
 All user-facing configuration lives in `package.json`'s `preferences` array (bucket name, access key, secret key,
-account ID, custom domain, filename format, AVIF toggle + path + quality, Markdown toggle). When adding or
-renaming a preference, update `package.json` and let Raycast regenerate `raycast-env.d.ts` — don't edit the
-generated types by hand.
+account ID, custom domain, filename format, upload path prefix, AVIF toggle + path + quality, link format
+dropdown). When adding or renaming a preference, update `package.json` and let Raycast regenerate
+`raycast-env.d.ts` — don't edit the generated types by hand.
 
 ## Code style
 
