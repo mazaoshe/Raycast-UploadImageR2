@@ -43,6 +43,7 @@ Note: Cloudflare R2 supports all file types as it's an object storage service th
 - Support custom filename formats
 - Automatically generate Markdown links and copy to clipboard
 - After upload, the link is automatically copied to clipboard for easy pasting
+- Browse your bucket's folders and files, preview images, and delete files from within Raycast
 
 ## Requirements
 
@@ -117,6 +118,18 @@ folder into the optional **Folder** argument next to the command in Raycast's se
   the next upload will go before pressing Enter
 - Type `/` or `root` to clear it and go back to the Upload Path Prefix preference (or the bucket root)
 
+## Browse R2 Files
+
+The "Browse R2 Files" command lets you navigate your bucket like a file manager:
+
+- Folders (based on the `/` separators in object keys) can be opened to drill down; use Raycast's back navigation
+  to go back up
+- Selecting a file shows a detail panel with an inline image preview (via a short-lived signed URL, so this works
+  even if your bucket isn't publicly accessible) and its key/content type
+- Actions let you copy the file's public URL or Markdown link, or delete the file (with a confirmation prompt)
+- Folders can also be deleted: this recursively removes every file under that folder (including subfolders), and
+  the confirmation prompt shows the exact number of files that will be permanently deleted before you confirm
+
 ## Usage Workflow
 
 ### Initial Setup
@@ -135,7 +148,7 @@ folder into the optional **Folder** argument next to the command in Raycast's se
    - Convert to AVIF
    - Quality settings for conversions
    - Encoder paths (if different from default)
-   - Generate Markdown (disabled by default)
+   - Link Format (Plain URL by default)
 
 ### Daily Usage
 1. Select any file in Finder

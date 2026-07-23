@@ -26,6 +26,13 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "browse-r2-files",
+      "title": "Browse R2 Files",
+      "subtitle": "Cloudflare R2",
+      "description": "Browse folders and files in your Cloudflare R2 bucket, preview images, and delete files.",
+      "mode": "view"
     }
   ],
   "preferences": [
@@ -136,6 +143,7 @@
   ],
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@raycast/api": "^1.102.4",
     "@raycast/utils": "^1.17.0",
     "dayjs": "^1.11.18"

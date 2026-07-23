@@ -4,9 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Raycast extension ("Cloudflare R2 File Uploader") with a single no-view command: it uploads the Finder-selected
-file to a Cloudflare R2 bucket (via the S3-compatible API), optionally converts images to AVIF first, and copies
-the resulting link (plain URL, Markdown, or HTML, per preference) to the clipboard.
+A Raycast extension ("Cloudflare R2 File Uploader") with two commands:
+- `r2-uploader` (no-view): uploads the Finder-selected file to a Cloudflare R2 bucket (via the S3-compatible API),
+  optionally converts images to AVIF first, and copies the resulting link (plain URL, Markdown, or HTML, per
+  preference) to the clipboard.
+- `browse-r2-files` (view): a folder/file browser for the same bucket — navigate folders, preview files (images
+  inline via a signed URL), copy links, and delete files.
 
 ## Commands
 
@@ -21,9 +24,9 @@ npm run publish       # publish to the Raycast Store (npx @raycast/api@latest pu
 There is no test suite. `ray build`/`ray lint` (both wrappers around `@raycast/api`'s CLI) are the primary
 correctness checks — they type-check against `raycast-env.d.ts` and validate the extension manifest.
 
-Since this is a Raycast "no-view" command, it can't be run as a plain Node script — use `npm run dev`, which
-registers the command with the local Raycast app so it can be invoked from the Raycast UI with a file selected
-in Finder.
+Neither command can be run as a plain Node script (one is a no-view command driven by Finder selection, the other
+is a Raycast React view) — use `npm run dev`, which registers both commands with the local Raycast app so they can
+be invoked from the Raycast UI, and hot-rebuilds (including regenerating `raycast-env.d.ts`) on file changes.
 
 ## Architecture
 
@@ -72,6 +75,33 @@ even with the argument left blank, and the command's subtitle in Raycast's root 
 `/` or `root` clears the sticky value and resets the subtitle. The resolved folder is passed as
 `pathPrefixOverride` to `uploadToR2()`, taking priority over the `uploadPathPrefix` preference; leaving both the
 argument and sticky storage empty falls back to that preference (or bucket root if unset).
+
+### Shared R2 client/URL helpers
+
+Both commands build their S3 client via `createR2Client()` (`src/utils/r2-client.ts`) and build the public-facing
+URL for a key via `buildPublicUrl()` (`src/utils/r2-url.ts`) — `uploadToR2.ts` and `browse-r2-files.tsx` both import
+these rather than duplicating the endpoint/credentials/custom-domain logic.
+
+### `browse-r2-files.tsx`
+
+A recursive Raycast `List` view: `FolderView({ prefix })` lists the current "directory" via `listR2Entries()`
+(`src/utils/r2-objects.ts`), which calls `ListObjectsV2Command` with `Delimiter: "/"` — `CommonPrefixes` become
+folder rows, `Contents` become file rows (sorted newest-first by `LastModified`). Selecting a folder pushes a new
+`FolderView` with the deeper prefix via `useNavigation().push()`, so back-navigation is Raycast's built-in behavior
+rather than custom state. Only file rows get a `List.Item.Detail`; `FilePreviewDetail` fetches a short-lived
+signed GET URL via `getPreviewUrl()` (`src/utils/r2-preview.ts`, using `@aws-sdk/s3-request-presigner`) and renders
+it as a Markdown image for image MIME types (`isImageMimeType()` in `mime-types.ts`) — this works regardless of
+whether the bucket/custom domain is actually publicly reachable, unlike reusing `buildPublicUrl()` for previews.
+Deleting a file calls `deleteR2Object()` after a destructive `confirmAlert()`, then calls the `usePromise`
+`revalidate()` to refresh the current folder's listing. Deleting a *folder* is a distinct, higher-blast-radius flow
+(`handleDeleteFolder`): it first recurses through every page of `listAllKeysUnderPrefix()` (no `Delimiter`, so it
+walks into subfolders too) to get an exact file count, shows that count in the `confirmAlert()` message before
+anything is deleted, then batches the deletes via `deleteR2Objects()` (`DeleteObjectsCommand`, chunked at 1000 keys
+per request — S3's per-call limit).
+
+Note: `@aws-sdk/s3-request-presigner` must stay version-pinned to match `@aws-sdk/client-s3` (both currently
+`3.864.0`) — a newer presigner against an older client-s3 fails to type-check (`S3Client` structurally
+incompatible with the presigner's expected `Client` type across `@smithy/*` versions).
 
 ## Preferences / config surface
 

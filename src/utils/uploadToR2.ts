@@ -1,9 +1,11 @@
 import { getPreferenceValues } from "@raycast/api";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
 import { getMimeType } from "./mime-types";
 import { generateFileName, renderTemplateTokens } from "./generate-fileName";
+import { createR2Client } from "./r2-client";
+import { buildPublicUrl } from "./r2-url";
 
 function buildObjectKey(fileName: string, pathPrefix: string | undefined, originalFilePath: string): string {
   if (!pathPrefix) {
@@ -24,30 +26,10 @@ export async function uploadToR2(
   customFileName: string | undefined,
   pathPrefixOverride?: string,
 ): Promise<{ url: string; markdown: string; html: string; key: string }> {
-  const preferences = getPreferenceValues();
-  const {
-    r2BucketName: bucketName,
-    r2AccessKeyId: accessKeyId,
-    r2SecretAccessKey: secretAccessKey,
-    r2AccountId: accountId,
-    customDomain,
-    fileNameFormat,
-    uploadPathPrefix,
-  } = preferences;
+  const { fileNameFormat, uploadPathPrefix } = getPreferenceValues();
+  const { client, bucketName, endpoint, customDomain } = createR2Client();
 
   const effectivePathPrefix = pathPrefixOverride !== undefined ? pathPrefixOverride : uploadPathPrefix;
-
-  const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
-
-  const s3Client = new S3Client({
-    region: "auto",
-    endpoint,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-    forcePathStyle: true,
-  });
 
   const fileContent = await fs.promises.readFile(filePath);
 
@@ -64,15 +46,9 @@ export async function uploadToR2(
     ContentType: contentType,
   });
 
-  await s3Client.send(putObjectCommand);
+  await client.send(putObjectCommand);
 
-  let url: string;
-  if (customDomain) {
-    const cleanDomain = customDomain.replace(/\/$/, "");
-    url = `${cleanDomain}/${key}`;
-  } else {
-    url = `${endpoint}/${bucketName}/${key}`;
-  }
+  const url = buildPublicUrl(key, { endpoint, bucketName, customDomain });
 
   const alt = path.basename(key, path.extname(key));
   const markdown = `![${alt}](${url})`;
