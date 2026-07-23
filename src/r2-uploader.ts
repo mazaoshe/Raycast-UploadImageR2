@@ -58,7 +58,17 @@ export default async function Command() {
       return;
     }
 
-    const selectedItems = await getSelectedFinderItems();
+    let selectedItems;
+    try {
+      selectedItems = await getSelectedFinderItems();
+    } catch {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Finder is not active",
+        message: "Please select a file in Finder (making it the frontmost app), then try again",
+      });
+      return;
+    }
 
     if (!selectedItems || selectedItems.length === 0) {
       await showToast({ style: Toast.Style.Failure, title: "No file selected" });
